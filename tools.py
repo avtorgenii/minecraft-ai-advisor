@@ -5,25 +5,28 @@ from langchain_ollama import ChatOllama
 from prompts import *
 
 
-def base_prompt(query, history, custom_system_prompt):
+def generate_prompt(query, history, custom_system_prompt, **kwargs):
+    """
+    :param kwargs: Additional arguments for custom_system_prompt formatting. May be 'subject' and/or 'context'
+    """
     prompt = ChatPromptTemplate([
         ("system", ROLE_PROMPT),
         MessagesPlaceholder(variable_name="history"),
         ("human", query),
-        ("system", custom_system_prompt), # custom prompt that determines what model should do and what it should output
+        ("system", custom_system_prompt.format(**kwargs)), # custom prompt that determines what model should do and what it should output
     ]).format_messages(history=history)
 
     return prompt
 
 # PRODUCTION
 def invoke_with_custom_prompt(llm, query, history, custom_system_prompt):
-    prompt = base_prompt(query, history, custom_system_prompt)
+    prompt = generate_prompt(query, history, custom_system_prompt)
 
     return llm.invoke(prompt)
 
 # DEBUG
 def stream_with_custom_prompt(llm, query, history, custom_system_prompt):
-    prompt = base_prompt(query, history, custom_system_prompt)
+    prompt = generate_prompt(query, history, custom_system_prompt)
     # Stream the response from the model
     for chunk in llm.stream(prompt):
         print(chunk.content, end="", flush=True)

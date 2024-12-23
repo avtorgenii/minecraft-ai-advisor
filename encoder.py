@@ -7,10 +7,18 @@ def save_st(verbose=False):
     if verbose:
         print("Saved model to disk")
 
-def load_st(verbose=False):
-    model = SentenceTransformer('./model')
-
-    if verbose:
-        print("Loaded model")
-
     return model
+
+def load_st(verbose=False):
+    try:
+        model = SentenceTransformer('./model')
+        return model
+    except Exception as e:
+        print(e)
+        return save_st(verbose=verbose)
+
+
+
+
+if __name__ == '__main__':
+    load_st(verbose=True)

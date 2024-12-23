@@ -49,6 +49,57 @@ Instructions:
 """
 
 
-DETERMINE_QUERY_TOPIC_PROMPT=f"""
+query_topic_is_craft_placeholder = 1
+query_topic_is_building_placeholder = 2
+query_topic_is_summoning_placeholder = 3
+query_topic_is_general_info_placeholder = 4
 
+DETERMINE_QUERY_TOPIC_PROMPT=f"""
+You are an AI assistant tasked with determining user's query topic.
+
+Instructions:
+1. Review the user's current query, its subject and the provided below context
+subject: {{subject}}
+context: {{context}} 
+2. Select the most appropriate topic for user's query and the context:
+    If topic is craft output: {query_topic_is_craft_placeholder}
+    If topic is about building something: {query_topic_is_building_placeholder}
+    If topic is summon: {query_topic_is_summoning_placeholder}
+    If topic is any other: {query_topic_is_general_info_placeholder}
 """
+
+
+REFINE_USER_QUERY_PROMPT="""
+Based on user's query and provided subject, refine and output user's query as if user mentioned subject in his query.
+subject: {subject}
+"""
+
+
+# General prompt - just for debug
+ANSWER_QUERY_TOPIC="""
+You are an AI assistant tasked with answering user's query.
+
+Instructions:
+1. Review the user's query, chat history and context
+context: {context}
+2. Output as concise and precise as possible answer for user's query
+3. Answer can be deeply hidden in the context but i know you will find it!
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

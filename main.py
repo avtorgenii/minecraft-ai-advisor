@@ -12,12 +12,3 @@ driver = webdriver.Chrome(options=options)
 
 # Navigate to the webpage
 driver.get('https://minecraft.wiki/w/Stone_Sword')
-
-# Get the page content
-page_content = driver.page_source
-
-# Close the browser
-driver.quit()
-
-# Print the page content (or do any other processing)
-print(page_content)
