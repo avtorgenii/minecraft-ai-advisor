@@ -37,7 +37,7 @@ class ContextPreparator:
             return None
         return page_content
 
-    def _parse_web_page(self, href, for_craft=True):
+    def _parse_web_page(self, href, for_craft=False):
         """
         Parse the web page and extract text content.
         If for_craft is True, extract items for crafting.
@@ -61,34 +61,75 @@ class ContextPreparator:
 
             for a in a_elements:
                 p_tag = soup.new_tag('p')
-                p_tag.string = a['title']
+                p_tag.string = a['title'] + ", "
                 a.replace_with(p_tag)
 
             for span in span_elements:
                 p_tag = soup.new_tag('p')
-                p_tag.string = span['title']
+                p_tag.string = span['title'] + ", "
                 span.replace_with(p_tag)
 
-            return soup.get_text(separator=' ', strip=True)
+            return soup
+        else:
+            return soup
 
-        return soup.get_text(separator=' ', strip=True)
-
-    def _split_pages_into_documents(self, pages):
+    def _split_htmls_into_documents(self, soups):
         """
-        Split multiple pages into smaller documents using a recursive character text splitter.
-        """
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=2000,
-            chunk_overlap=200
-        )
+        Split multiple HTML pages into smaller documents by <h2> tags and convert them to plain text.
+        More efficient implementation using direct node traversal instead of string operations.
 
+        Args:
+            soups: List of BeautifulSoup objects representing HTML documents
+
+        Returns:
+            list: List of plain text documents split at <h2> tags
+        """
         documents = []
 
-        for page in pages:
-            split = splitter.split_text(page)
-            documents.extend(split)
+        for soup in soups:
+            # Find all <h2> tags
+            h2_tags = soup.find_all('h2')
+
+            if not h2_tags:
+                # If no h2 tags, process the entire document as one piece
+                documents.append(soup.get_text(separator=' ', strip=True))
+                continue
+
+            # Process document segments between h2 tags
+            current_h2 = None
+            for next_h2 in h2_tags:
+                if current_h2 is None:
+                    # Handle content before first h2
+                    content = []
+                    node = soup.find(recursive=False)
+                    while node and node != next_h2:
+                        if node.name != 'h2':
+                            content.append(node.get_text(separator=' ', strip=True))
+                        node = node.next_sibling
+                    if content:
+                        documents.append(' '.join(content))
+                else:
+                    # Handle content between h2 tags
+                    content = []
+                    node = current_h2.next_sibling
+                    while node and node != next_h2:
+                        content.append(node.get_text(separator=' ', strip=True))
+                        node = node.next_sibling
+                    documents.append(f"{current_h2.get_text()} {' '.join(content)}")
+
+                current_h2 = next_h2
+
+            # Handle content after last h2
+            if current_h2:
+                content = []
+                node = current_h2.next_sibling
+                while node:
+                    content.append(node.get_text(separator=' ', strip=True))
+                    node = node.next_sibling
+                documents.append(f"{current_h2.get_text()} {' '.join(content)}")
 
         return documents
+
 
     def _extract_context_from_documents(self, query, documents, n=2):
         """
@@ -96,6 +137,7 @@ class ContextPreparator:
         :param n: Number of documents to extract for context.
         :return: Context for LLM
         """
+        query = "craft"
         n = min(n, len(documents))  # Ensure 'n' is not larger than the number of documents
 
         doc_embeddings = self.model.encode(documents)
@@ -109,14 +151,14 @@ class ContextPreparator:
         return "\n".join(top_n_documents)
 
 
-    def get_context(self, query):
+    def get_context(self, query, for_craft=False):
         hrefs = self._search_web_pages(query)
-        pages = []
+        htmls = []
 
         for href in hrefs:
-            pages.append(self._parse_web_page(href))
+            htmls.append(self._parse_web_page(href, for_craft))
 
-        documents = self._split_pages_into_documents(pages)
+        documents = self._split_htmls_into_documents(htmls)
 
         return self._extract_context_from_documents(query, documents)
 
@@ -135,12 +177,13 @@ class ContextPreparator:
 
 
 if __name__ == '__main__':
-    query = "how to craft blood altar in ftb evolved"
+    query = "how to craft blood altar"
 
     cp = ContextPreparator()
 
-    context = cp.get_context(query)
+    context = cp.get_context(query, True)
 
     print(context)
 
 
+# <div class="gridItemContainer CraftingGridCell" style="left:8px; top:100px; width:32px; height:32px; position:absolute;"><span class="grid" data-minetip-text=""><a class="mw-redirect" href="/wiki/Gold_Ingot" title="Gold Ingot">
