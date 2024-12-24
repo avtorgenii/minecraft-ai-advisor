@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 class ContextPreparator:
     def __init__(self):
-        # Duckduck go web search
+        # Duckduck go web search for images
         self.ddgs = DDGS()
 
         # Selenium web search options
@@ -24,9 +24,17 @@ class ContextPreparator:
         # Sentence encoder for extracting context
         self.model = load_st()
 
+
+    def __del__(self):
+        try:
+            self.driver.close()
+        except ImportError:
+            pass
+
+
     def _search_web_pages(self, query):
         """Search for web pages using DuckDuckGo."""
-        return [res['href'] for res in self.ddgs.text(query, max_results=1)]
+        return [res['href'] for res in self.ddgs.text(query, max_results=2)]
 
     def _selenium_search(self, href):
         """Use Selenium to extract page content."""
@@ -42,12 +50,7 @@ class ContextPreparator:
         Parse the web page and extract text content.
         If for_craft is True, extract items for crafting.
         """
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        }
-
-        response = requests.get(href, headers=headers)
-        html = response.text if response.status_code == 200 else self._selenium_search(href)
+        html = self._selenium_search(href)
 
         if html is None:
             return None
@@ -56,18 +59,46 @@ class ContextPreparator:
 
         # Handle crafting-specific page parsing
         if for_craft:
-            a_elements = soup.find_all('a', attrs={'title': True})
-            span_elements = soup.find_all('span', attrs={'title': True})
+            crafting_grid_divs = soup.find_all('div', class_='CraftingGrid')
 
-            for a in a_elements:
+            # Iterate over each CraftingGrid div separately
+            for crafting_grid_div in crafting_grid_divs:
                 p_tag = soup.new_tag('p')
-                p_tag.string = a['title'] + ", "
-                a.replace_with(p_tag)
+                p_tag.string = 'CRAFTING RECIPE:'
 
-            for span in span_elements:
-                p_tag = soup.new_tag('p')
-                p_tag.string = span['title'] + ", "
-                span.replace_with(p_tag)
+                # Insert the <p> tag before the CraftingGrid div
+                crafting_grid_div.insert_before(p_tag)
+
+                # Find all gridItemContainer divs inside the current CraftingGrid div
+                grid_items = crafting_grid_div.find_all('div', class_='gridItemContainer')
+
+                # Dictionary to count the occurrences of each ingredient
+                ingredient_count_dict = {}
+
+                # Iterate over each gridItemContainer and count the occurrences of ingredients
+                for item in grid_items:
+                    # Find the span element with the title attribute and no class attribute (i.e., ingredient)
+                    title_spans = item.find_all('span', title=True, class_=False, recursive=True)
+
+                    # Count occurrences of each ingredient
+                    for title_span in title_spans:
+                        ingredient = title_span['title']
+                        if ingredient in ingredient_count_dict:
+                            ingredient_count_dict[ingredient] += 1
+                        else:
+                            ingredient_count_dict[ingredient] = 1
+
+                # After counting ingredients, replace spans with ingredient-count pairs
+                for ingredient, count in ingredient_count_dict.items():
+                    p_tag = soup.new_tag('p')
+                    p_tag.string = f"{ingredient} x{count}"  # Pair with count
+
+                    # Insert the new <p> tag for each ingredient
+                    crafting_grid_div.insert_before(p_tag)
+
+                # Optionally, remove the original gridItemContainer divs after processing
+                for item in grid_items:
+                    item.extract()
 
             return soup
         else:
@@ -75,69 +106,67 @@ class ContextPreparator:
 
     def _split_htmls_into_documents(self, soups):
         """
-        Split multiple HTML pages into smaller documents by <h2> tags and convert them to plain text.
+        Split multiple HTML pages into smaller documents by <h2> and <h3> tags and convert them to plain text.
         More efficient implementation using direct node traversal instead of string operations.
 
         Args:
             soups: List of BeautifulSoup objects representing HTML documents
 
         Returns:
-            list: List of plain text documents split at <h2> tags
+            list: List of plain text documents split at <h2> and <h3> tags
         """
         documents = []
 
         for soup in soups:
-            # Find all <h2> tags
-            h2_tags = soup.find_all('h2')
+            # Find all <h2> and <h3> tags
+            headers = soup.find_all(['h2', 'h3'])
 
-            if not h2_tags:
-                # If no h2 tags, process the entire document as one piece
+            if not headers:
+                # If no h2 or h3 tags, process the entire document as one piece
                 documents.append(soup.get_text(separator=' ', strip=True))
                 continue
 
-            # Process document segments between h2 tags
-            current_h2 = None
-            for next_h2 in h2_tags:
-                if current_h2 is None:
-                    # Handle content before first h2
+            # Process document segments between <h2> and <h3> tags
+            current_header = None
+            for next_header in headers:
+                if current_header is None:
+                    # Handle content before first header
                     content = []
                     node = soup.find(recursive=False)
-                    while node and node != next_h2:
-                        if node.name != 'h2':
+                    while node and node != next_header:
+                        if node.name not in ['h2', 'h3']:
                             content.append(node.get_text(separator=' ', strip=True))
                         node = node.next_sibling
                     if content:
                         documents.append(' '.join(content))
                 else:
-                    # Handle content between h2 tags
+                    # Handle content between headers
                     content = []
-                    node = current_h2.next_sibling
-                    while node and node != next_h2:
+                    node = current_header.next_sibling
+                    while node and node != next_header:
                         content.append(node.get_text(separator=' ', strip=True))
                         node = node.next_sibling
-                    documents.append(f"{current_h2.get_text()} {' '.join(content)}")
+                    documents.append(f"{current_header.get_text()} {' '.join(content)}")
 
-                current_h2 = next_h2
+                current_header = next_header
 
-            # Handle content after last h2
-            if current_h2:
+            # Handle content after the last header
+            if current_header:
                 content = []
-                node = current_h2.next_sibling
+                node = current_header.next_sibling
                 while node:
                     content.append(node.get_text(separator=' ', strip=True))
                     node = node.next_sibling
-                documents.append(f"{current_h2.get_text()} {' '.join(content)}")
+                documents.append(f"{current_header.get_text()} {' '.join(content)}")
 
         return documents
 
-
-    def _extract_context_from_documents(self, query, documents, n=2):
+    def _extract_context_from_documents(self, query, documents, n=1):
         """
         Extract context for the query from the most relevant documents.
         :param n: Number of documents to extract for context.
         :return: Context for LLM
         """
-        query = "craft"
         n = min(n, len(documents))  # Ensure 'n' is not larger than the number of documents
 
         doc_embeddings = self.model.encode(documents)
@@ -177,7 +206,7 @@ class ContextPreparator:
 
 
 if __name__ == '__main__':
-    query = "how to craft blood altar"
+    query = "how to craft wooden sword in minecraft"
 
     cp = ContextPreparator()
 
@@ -185,5 +214,10 @@ if __name__ == '__main__':
 
     print(context)
 
+    # parsed = cp._parse_web_page("https://ftb.fandom.com/wiki/Blood_Altar", False)
+    #
+    # print(parsed)
 
-# <div class="gridItemContainer CraftingGridCell" style="left:8px; top:100px; width:32px; height:32px; position:absolute;"><span class="grid" data-minetip-text=""><a class="mw-redirect" href="/wiki/Gold_Ingot" title="Gold Ingot">
+
+
+
