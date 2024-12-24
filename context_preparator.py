@@ -32,9 +32,9 @@ class ContextPreparator:
             pass
 
 
-    def _search_web_pages(self, query):
+    def _search_web_pages(self, query, max_results=2):
         """Search for web pages using DuckDuckGo."""
-        return [res['href'] for res in self.ddgs.text(query, max_results=2)]
+        return [res['href'] for res in self.ddgs.text(query, max_results=max_results)]
 
     def _selenium_search(self, href):
         """Use Selenium to extract page content."""
@@ -106,68 +106,69 @@ class ContextPreparator:
 
     def _split_htmls_into_documents(self, soups):
         """
-        Split multiple HTML pages into smaller documents by <h2> and <h3> tags and convert them to plain text.
+        Split multiple HTML pages into smaller documents by <h2> tags and convert them to plain text.
         More efficient implementation using direct node traversal instead of string operations.
 
         Args:
             soups: List of BeautifulSoup objects representing HTML documents
 
         Returns:
-            list: List of plain text documents split at <h2> and <h3> tags
+            list: List of plain text documents split at <h2> tags
         """
         documents = []
 
         for soup in soups:
-            # Find all <h2> and <h3> tags
-            headers = soup.find_all(['h2', 'h3'])
+            # Find all <h2> tags
+            h2_tags = soup.find_all('h2')
 
-            if not headers:
-                # If no h2 or h3 tags, process the entire document as one piece
+            if not h2_tags:
+                # If no h2 tags, process the entire document as one piece
                 documents.append(soup.get_text(separator=' ', strip=True))
                 continue
 
-            # Process document segments between <h2> and <h3> tags
-            current_header = None
-            for next_header in headers:
-                if current_header is None:
-                    # Handle content before first header
+            # Process document segments between h2 tags
+            current_h2 = None
+            for next_h2 in h2_tags:
+                if current_h2 is None:
+                    # Handle content before first h2
                     content = []
                     node = soup.find(recursive=False)
-                    while node and node != next_header:
-                        if node.name not in ['h2', 'h3']:
+                    while node and node != next_h2:
+                        if node.name != 'h2':
                             content.append(node.get_text(separator=' ', strip=True))
                         node = node.next_sibling
                     if content:
                         documents.append(' '.join(content))
                 else:
-                    # Handle content between headers
+                    # Handle content between h2 tags
                     content = []
-                    node = current_header.next_sibling
-                    while node and node != next_header:
+                    node = current_h2.next_sibling
+                    while node and node != next_h2:
                         content.append(node.get_text(separator=' ', strip=True))
                         node = node.next_sibling
-                    documents.append(f"{current_header.get_text()} {' '.join(content)}")
+                    documents.append(f"{current_h2.get_text()} {' '.join(content)}")
 
-                current_header = next_header
+                current_h2 = next_h2
 
-            # Handle content after the last header
-            if current_header:
+            # Handle content after last h2
+            if current_h2:
                 content = []
-                node = current_header.next_sibling
+                node = current_h2.next_sibling
                 while node:
                     content.append(node.get_text(separator=' ', strip=True))
                     node = node.next_sibling
-                documents.append(f"{current_header.get_text()} {' '.join(content)}")
+                documents.append(f"{current_h2.get_text()} {' '.join(content)}")
 
         return documents
 
-    def _extract_context_from_documents(self, query, documents, n=1):
+
+    def _extract_context_from_documents(self, query, documents, n_docs=1):
         """
         Extract context for the query from the most relevant documents.
         :param n: Number of documents to extract for context.
         :return: Context for LLM
         """
-        n = min(n, len(documents))  # Ensure 'n' is not larger than the number of documents
+        n = min(n_docs, len(documents))  # Ensure 'n' is not larger than the number of documents
 
         doc_embeddings = self.model.encode(documents)
         query_embedding = self.model.encode([query])
@@ -180,8 +181,8 @@ class ContextPreparator:
         return "\n".join(top_n_documents)
 
 
-    def get_context(self, query, for_craft=False):
-        hrefs = self._search_web_pages(query)
+    def get_context(self, query, max_sources=2, n_docs=2, for_craft=False):
+        hrefs = self._search_web_pages(query, max_sources)
         htmls = []
 
         for href in hrefs:
@@ -189,13 +190,13 @@ class ContextPreparator:
 
         documents = self._split_htmls_into_documents(htmls)
 
-        return self._extract_context_from_documents(query, documents)
+        return self._extract_context_from_documents(query, documents, n_docs)
 
 
-    def search_images(self, query):
+    def search_images(self, query, max_results=2):
         image_urls = None
         try:
-            image_urls = self.ddgs.images(query, max_results=2)
+            image_urls = self.ddgs.images(query, max_results=max_results)
         except Exception as e:
             print(e)
 
@@ -206,7 +207,7 @@ class ContextPreparator:
 
 
 if __name__ == '__main__':
-    query = "how to craft wooden sword in minecraft"
+    query = "how to craft tin cable"
 
     cp = ContextPreparator()
 
