@@ -32,7 +32,7 @@ class ContextPreparator:
             pass
 
 
-    def _search_web_pages(self, query, max_results=2):
+    def _search_web_pages(self, query, max_results):
         """Search for web pages using DuckDuckGo."""
         return [res['href'] for res in self.ddgs.text(query, max_results=max_results)]
 
@@ -57,54 +57,9 @@ class ContextPreparator:
 
         soup = BeautifulSoup(html, 'html.parser')
 
-        # Handle crafting-specific page parsing
-        if for_craft:
-            crafting_grid_divs = soup.find_all('div', class_='CraftingGrid')
+        return soup.get_text(separator=' ', strip=True)
 
-            # Iterate over each CraftingGrid div separately
-            for crafting_grid_div in crafting_grid_divs:
-                p_tag = soup.new_tag('p')
-                p_tag.string = 'CRAFTING RECIPE:'
-
-                # Insert the <p> tag before the CraftingGrid div
-                crafting_grid_div.insert_before(p_tag)
-
-                # Find all gridItemContainer divs inside the current CraftingGrid div
-                grid_items = crafting_grid_div.find_all('div', class_='gridItemContainer')
-
-                # Dictionary to count the occurrences of each ingredient
-                ingredient_count_dict = {}
-
-                # Iterate over each gridItemContainer and count the occurrences of ingredients
-                for item in grid_items:
-                    # Find the span element with the title attribute and no class attribute (i.e., ingredient)
-                    title_spans = item.find_all('span', title=True, class_=False, recursive=True)
-
-                    # Count occurrences of each ingredient
-                    for title_span in title_spans:
-                        ingredient = title_span['title']
-                        if ingredient in ingredient_count_dict:
-                            ingredient_count_dict[ingredient] += 1
-                        else:
-                            ingredient_count_dict[ingredient] = 1
-
-                # After counting ingredients, replace spans with ingredient-count pairs
-                for ingredient, count in ingredient_count_dict.items():
-                    p_tag = soup.new_tag('p')
-                    p_tag.string = f"{ingredient} x{count}"  # Pair with count
-
-                    # Insert the new <p> tag for each ingredient
-                    crafting_grid_div.insert_before(p_tag)
-
-                # Optionally, remove the original gridItemContainer divs after processing
-                for item in grid_items:
-                    item.extract()
-
-            return soup
-        else:
-            return soup
-
-    def _split_htmls_into_documents(self, soups):
+    def _split_htmls_into_documents(self, htmls):
         """
         Split multiple HTML pages into smaller documents by <h2> tags and convert them to plain text.
         More efficient implementation using direct node traversal instead of string operations.
@@ -117,52 +72,21 @@ class ContextPreparator:
         """
         documents = []
 
-        for soup in soups:
-            # Find all <h2> tags
-            h2_tags = soup.find_all('h2')
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100
+        )
 
-            if not h2_tags:
-                # If no h2 tags, process the entire document as one piece
-                documents.append(soup.get_text(separator=' ', strip=True))
-                continue
+        for html in htmls:
+            split = splitter.split_text(html)
 
-            # Process document segments between h2 tags
-            current_h2 = None
-            for next_h2 in h2_tags:
-                if current_h2 is None:
-                    # Handle content before first h2
-                    content = []
-                    node = soup.find(recursive=False)
-                    while node and node != next_h2:
-                        if node.name != 'h2':
-                            content.append(node.get_text(separator=' ', strip=True))
-                        node = node.next_sibling
-                    if content:
-                        documents.append(' '.join(content))
-                else:
-                    # Handle content between h2 tags
-                    content = []
-                    node = current_h2.next_sibling
-                    while node and node != next_h2:
-                        content.append(node.get_text(separator=' ', strip=True))
-                        node = node.next_sibling
-                    documents.append(f"{current_h2.get_text()} {' '.join(content)}")
-
-                current_h2 = next_h2
-
-            # Handle content after last h2
-            if current_h2:
-                content = []
-                node = current_h2.next_sibling
-                while node:
-                    content.append(node.get_text(separator=' ', strip=True))
-                    node = node.next_sibling
-                documents.append(f"{current_h2.get_text()} {' '.join(content)}")
+            for doc in split:
+                documents.append(doc)
 
         return documents
 
 
-    def _extract_context_from_documents(self, query, documents, n_docs=1):
+    def _extract_context_from_documents(self, query, documents, n_docs):
         """
         Extract context for the query from the most relevant documents.
         :param n: Number of documents to extract for context.
@@ -181,43 +105,57 @@ class ContextPreparator:
         return "\n".join(top_n_documents)
 
 
-    def get_context(self, query, max_sources=2, n_docs=2, for_craft=False):
+    def get_context(self, query, max_sources=3, n_docs=6):
         hrefs = self._search_web_pages(query, max_sources)
         htmls = []
 
         for href in hrefs:
-            htmls.append(self._parse_web_page(href, for_craft))
+            htmls.append(self._parse_web_page(href))
 
         documents = self._split_htmls_into_documents(htmls)
 
         return self._extract_context_from_documents(query, documents, n_docs)
 
 
-    def search_images(self, query, max_results=2):
-        image_urls = None
+    def search_images(self, query, max_results=4):
+        image_urls = []
         try:
-            image_urls = self.ddgs.images(query, max_results=max_results)
+            images = self.ddgs.images(query, max_results=max_results)
+
+            for image in images:
+                image_urls.append(image['image'])
+
         except Exception as e:
             print(e)
 
         return image_urls
+
+    def search_videos(self, query, max_results=1):
+        video_urls = []
+        try:
+            videos = self.ddgs.videos(query, max_results=max_results)
+
+            for video in videos:
+                video_urls.append(video['content'])
+
+        except Exception as e:
+            print(e)
+
+        return video_urls
 
 
 
 
 
 if __name__ == '__main__':
-    query = "how to craft tin cable"
+    query = "how to make nether portal"
 
     cp = ContextPreparator()
 
-    context = cp.get_context(query, True)
+    context = cp.get_context(query)
 
     print(context)
 
-    # parsed = cp._parse_web_page("https://ftb.fandom.com/wiki/Blood_Altar", False)
-    #
-    # print(parsed)
 
 
 
