@@ -132,7 +132,8 @@ graph_builder.add_conditional_edges(
     tools_condition,
 )
 # Any time a tool is called, we return to the chatbot to decide the next step
-graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_edge("tools", "chatbot") # что то тут надо подшаманить чтобы модель могла вызывать по несколько инструментов за раз. Если не получится - перенеси решение о вызове инструментов в параметр единого инструмента
+graph_builder.add_edge("tools", "tools")
 
 
 
