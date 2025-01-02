@@ -1,83 +1,109 @@
-from typing import Type
+from typing import List, Dict
+from langchain_core.tools import tool
 
-from duckduckgo_search import DDGS
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.tools import BaseTool
-from langchain_ollama import ChatOllama
-from pydantic import BaseModel, Field
 
 from context_preparator import ContextPreparator
-from prompts import *
+
 
 
 
 cp = ContextPreparator()
 
-class WebSearchInput(BaseModel):
-    query: str = Field(..., description="web search query to look up")
-
-class InfoWebSearchTool(BaseTool):
-    name: str = "info_web_search_tool"
-    description: str = "Use this tool when you need to find some information on certain topic."
-    args_schema: Type[BaseModel] = WebSearchInput
-
-    def _run(self, query: str) -> str:
-        return cp.get_context(query)
-
-
-    def _arun(self, query: str) -> str:
-        return self._run(query)
-
-class ImagesWebSearchTool(BaseTool):
-    name: str = "images_web_search_tool"
-    description: str = "Use this tool when you need to find some images."
-    args_schema: Type[BaseModel] = WebSearchInput
-
-    def _run(self, query: str) -> str:
-        return cp.search_images(query)
-
-    def _arun(self, query: str) -> str:
-        return self._run(query)
-
-class VideosWebSearchTool(BaseTool):
-    name: str = "videos_web_search_tool"
-    description: str = "Use this tool when you need to find some videos."
-    args_schema: Type[BaseModel] = WebSearchInput
-
-    def _run(self, query: str) -> str:
-        return cp.search_videos(query)
-
-    def _arun(self, query: str) -> str:
-        return self._run(query)
-
-
-def generate_prompt(query, custom_system_prompt, **kwargs):
+@tool(parse_docstring=True)
+def unified_search_tool(queries: List[str], tools_to_call: List[str]) -> Dict[str, List[str]]:
     """
-    :param kwargs: Additional arguments for custom_system_prompt formatting. May be 'subject' and/or 'context'
+    A unified tool that performs web searches for multiple queries using specified functions.
+
+    Args:
+        queries (List[str]): A list of search queries.
+        tools_to_call (List[str]): A list of tool names to call. Supported tools: ["info", "images", "videos"]. Use "info" tool when user asks you about information on something.
+
+    Returns:
+        Dict[str, List[str]]: A dictionary where keys are tool names and values are lists of results
+        corresponding to the queries for each tool.
     """
-    prompt = ChatPromptTemplate([
-        ("system", ROLE_PROMPT),
-        ("human", query),
-        ("system", custom_system_prompt.format(**kwargs)), # custom prompt that determines what model should do and what it should output
-    ]).format_messages(history=history)
+    results = {"info": [], "images": [], "videos": []}
 
-    return prompt
+    for query in queries:
+        if "info" in tools_to_call:
+            results["info"].append(cp.get_context(query))
+        if "images" in tools_to_call:
+            results["images"].append(cp.search_images(query))
+        if "videos" in tools_to_call:
+            results["videos"].append(cp.search_videos(query))
 
-# PRODUCTION
-def invoke_with_custom_prompt(llm, query, custom_system_prompt):
-    prompt = generate_prompt(query, custom_system_prompt)
+    # Remove keys with no results
+    results = {k: v for k, v in results.items() if v}
+    return results
 
-    print(prompt)
 
-    return llm.invoke(prompt)
 
-# DEBUG
-def stream_with_custom_prompt(llm, query, custom_system_prompt):
-    prompt = generate_prompt(query, custom_system_prompt)
-    # Stream the response from the model
-    for chunk in llm.stream(prompt):
-        print(chunk.content, end="", flush=True)
+def info_web_search(query: str) -> str:
+    """
+    Use this tool when you need to find some information on a certain topic.
+
+    Args:
+        query (str): The web search query to look up.
+
+    Returns:
+        str: Contextual information related to the query.
+    """
+    return cp.get_context(query)
+
+
+def images_web_search(query: str) -> str:
+    """
+    Use this tool when you need to find some images.
+
+    Args:
+        query (str): The web search query for finding images.
+
+    Returns:
+        str: Links or data about the images found for the query.
+    """
+    return cp.search_images(query)
+
+
+def videos_web_search(query: str) -> str:
+    """
+    Use this tool when you need to find some videos.
+
+    Args:
+        query (str): The web search query for finding videos.
+
+    Returns:
+        str: Links or data about the videos found for the query.
+    """
+    return cp.search_videos(query)
+
+
+
+# def generate_prompt(query, custom_system_prompt, **kwargs):
+#     """
+#     :param kwargs: Additional arguments for custom_system_prompt formatting. May be 'subject' and/or 'context'
+#     """
+#     prompt = ChatPromptTemplate([
+#         ("system", ROLE_PROMPT),
+#         ("human", query),
+#         ("system", custom_system_prompt.format(**kwargs)), # custom prompt that determines what model should do and what it should output
+#     ]).format_messages(history=history)
+#
+#     return prompt
+#
+# # PRODUCTION
+# def invoke_with_custom_prompt(llm, query, custom_system_prompt):
+#     prompt = generate_prompt(query, custom_system_prompt)
+#
+#     print(prompt)
+#
+#     return llm.invoke(prompt)
+#
+# # DEBUG
+# def stream_with_custom_prompt(llm, query, custom_system_prompt):
+#     prompt = generate_prompt(query, custom_system_prompt)
+#     # Stream the response from the model
+#     for chunk in llm.stream(prompt):
+#         print(chunk.content, end="", flush=True)
 
 
 
@@ -85,31 +111,32 @@ def stream_with_custom_prompt(llm, query, custom_system_prompt):
 
 
 if __name__ == '__main__':
-    llm = ChatOllama(
-        model="cow/gemma2_tools:9b",
-        temperature=0.2,
-        num_predict=256
-    )
-
-
-    print('Model loaded')
-
-
-
-
+    # llm = ChatOllama(
+    #     model="cow/gemma2_tools:9b",
+    #     temperature=0.2,
+    #     num_predict=256
+    # )
+    #
+    #
+    # print('Model loaded')
+    #
+    #
+    #
+    #
+    # # history = [
+    # #     HumanMessage("how to craft stone axe"),
+    # #     AIMessage("""{"stick": 2, "cobblestone": 3}""")
+    # # ]
+    # #
+    # # stream_with_custom_prompt(llm, query="how does axe look like", history=history, custom_system_prompt=DETERMINE_IF_QUERY_IS_ABOUT_LOOKS_PROMPT)
+    #
     # history = [
-    #     HumanMessage("how to craft stone axe"),
-    #     AIMessage("""{"stick": 2, "cobblestone": 3}""")
+    #     HumanMessage("what is nether portal"),
+    #     AIMessage("""Nether portal is a building that is used to enter Nether dimension""")
     # ]
     #
-    # stream_with_custom_prompt(llm, query="how does axe look like", history=history, custom_system_prompt=DETERMINE_IF_QUERY_IS_ABOUT_LOOKS_PROMPT)
-
-    history = [
-        HumanMessage("what is nether portal"),
-        AIMessage("""Nether portal is a building that is used to enter Nether dimension""")
-    ]
-
-    res = invoke_with_custom_prompt(llm, query="how to build it",
-                              custom_system_prompt=CONSTRUCT_WEB_SEARCH_QUERY_PROMPT)
-
-    print(res)
+    # res = invoke_with_custom_prompt(llm, query="how to build it",
+    #                           custom_system_prompt=CONSTRUCT_WEB_SEARCH_QUERY_PROMPT)
+    #
+    # print(res)
+    pass
