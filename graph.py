@@ -17,7 +17,7 @@ from tools import unified_search_tool
 # Should be passed to graph as a parameter and defined somewhere in main.py
 llm = ChatOllama(
     model = "llama3-groq-tool-use",
-    temperature = 0,
+    temperature = 0.2,
     num_predict = 256
 )
 
@@ -52,11 +52,6 @@ def chatbot(state: State):
 
     return {**state, 'messages': new_messages}
 
-
-
-
-
-
 # Graph compiling
 graph_builder = StateGraph(State)
 
@@ -70,10 +65,11 @@ graph_builder.add_node("tools", ToolNode(tools=tools))
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_conditional_edges(
     "chatbot",
-    tools_condition,
+    tools_condition
 )
 # Any time a tool is called, we return to the chatbot to decide the next step
 graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_edge("chatbot", END)
 
 
 
@@ -81,16 +77,18 @@ graph_builder.add_edge("tools", "chatbot")
 graph = graph_builder.compile(checkpointer=memory)
 
 
-#prompt: what is blood altar
+# what is blood altar
+# how does blood altar look like
+# give me a tutorial on how to build tier 4 blood altar
 
 
 if __name__ == '__main__':
     while True:
         user_input = input("You: ")
-        user_input += " in Minecraft, use `info` tool if you can't answer my question straightaway" # hard coding that question is about minecraft
+        user_input += ". Please use tool when user asks you about info, looks/images or videos of something."
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
 
-        res = graph.invoke({'messages': user_input}, config)
+        res = graph.invoke({'messages': user_input}, config)['messages'][-1]
         print(res)

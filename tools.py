@@ -15,7 +15,7 @@ def unified_search_tool(queries: List[str], tools_to_call: List[str]) -> Dict[st
     A unified tool that performs web searches for multiple queries using specified functions.
 
     Args:
-        queries (List[str]): A list of search queries.
+        queries (List[str]): A list of search queries. Add to the end of query "in minecraft" words
         tools_to_call (List[str]): A list of tool names to call. Supported tools: ["info", "images", "videos"]. Use "info" tool when user asks you about information on something.
 
     Returns:
@@ -75,39 +75,6 @@ def videos_web_search(query: str) -> str:
         str: Links or data about the videos found for the query.
     """
     return cp.search_videos(query)
-
-
-
-# def generate_prompt(query, custom_system_prompt, **kwargs):
-#     """
-#     :param kwargs: Additional arguments for custom_system_prompt formatting. May be 'subject' and/or 'context'
-#     """
-#     prompt = ChatPromptTemplate([
-#         ("system", ROLE_PROMPT),
-#         ("human", query),
-#         ("system", custom_system_prompt.format(**kwargs)), # custom prompt that determines what model should do and what it should output
-#     ]).format_messages(history=history)
-#
-#     return prompt
-#
-# # PRODUCTION
-# def invoke_with_custom_prompt(llm, query, custom_system_prompt):
-#     prompt = generate_prompt(query, custom_system_prompt)
-#
-#     print(prompt)
-#
-#     return llm.invoke(prompt)
-#
-# # DEBUG
-# def stream_with_custom_prompt(llm, query, custom_system_prompt):
-#     prompt = generate_prompt(query, custom_system_prompt)
-#     # Stream the response from the model
-#     for chunk in llm.stream(prompt):
-#         print(chunk.content, end="", flush=True)
-
-
-
-
 
 
 if __name__ == '__main__':

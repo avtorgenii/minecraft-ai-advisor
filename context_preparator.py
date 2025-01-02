@@ -19,6 +19,7 @@ class ContextPreparator:
         self.options.add_argument('--headless')  # Run in headless mode (no browser window)
         self.options.add_argument('--disable-gpu')  # Disable GPU for headless mode
         self.options.add_argument('--no-sandbox')  # Necessary for some systems (Linux-based)
+        self.options.add_argument('--mute-audio')  # Mute audio
         self.driver = webdriver.Chrome(options=self.options)
 
         # Sentence encoder for extracting context
@@ -73,8 +74,8 @@ class ContextPreparator:
         documents = []
 
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=100
+            chunk_size=5000,
+            chunk_overlap=200
         )
 
         for html in htmls:
@@ -105,7 +106,7 @@ class ContextPreparator:
         return "\n".join(top_n_documents)
 
 
-    def get_context(self, query, max_sources=3, n_docs=6):
+    def get_context(self, query, max_sources=3, n_docs=3):
         hrefs = self._search_web_pages(query, max_sources)
         htmls = []
 
@@ -130,7 +131,7 @@ class ContextPreparator:
 
         return image_urls
 
-    def search_videos(self, query, max_results=1):
+    def search_videos(self, query, max_results=3):
         video_urls = []
         try:
             videos = self.ddgs.videos(query, max_results=max_results)
