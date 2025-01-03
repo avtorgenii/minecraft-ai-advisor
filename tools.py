@@ -15,7 +15,7 @@ def unified_search_tool(queries: List[str], tools_to_call: List[str]) -> Dict[st
     A unified tool that performs web searches for multiple queries using specified functions.
 
     Args:
-        queries (List[str]): A list of search queries. Add to the end of query "in minecraft" words
+        queries (List[str]): A list of search queries. Add to the end of query "in minecraft" words.
         tools_to_call (List[str]): A list of tool names to call. Supported tools: ["info", "images", "videos"]. Use "info" tool when user asks you about information on something.
 
     Returns:

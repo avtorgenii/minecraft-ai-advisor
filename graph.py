@@ -12,6 +12,9 @@ from langchain_ollama import ChatOllama
 from prompts import *
 from tools import unified_search_tool
 
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
+
 
 # Necessary definitions
 # Should be passed to graph as a parameter and defined somewhere in main.py
@@ -31,11 +34,7 @@ tools = [unified_search_tool]
 llm = llm.bind_tools(tools)
 
 
-memory = MemorySaver()
-config = {"configurable": {"thread_id": "1"}}
 
-def get_history():
-    return memory.get(config)
 
 
 class State(TypedDict):
@@ -48,9 +47,15 @@ def chatbot(state: State):
 
     ai_response = llm.invoke(prompt)
 
+    if len(ai_response.tool_calls) > 0:
+        ai_response.additional_kwargs['final'] = False
+    else:
+        ai_response.additional_kwargs['final'] = True
+
     new_messages = state['messages'] + [ai_response]
 
     return {**state, 'messages': new_messages}
+
 
 # Graph compiling
 graph_builder = StateGraph(State)
@@ -73,8 +78,14 @@ graph_builder.add_edge("chatbot", END)
 
 
 
+# Memory
+def load_memory():
+    conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
+    return SqliteSaver(conn)
+
 # Compilation
-graph = graph_builder.compile(checkpointer=memory)
+def get_graph():
+    return graph_builder.compile(checkpointer=load_memory())
 
 
 # what is blood altar
@@ -83,12 +94,22 @@ graph = graph_builder.compile(checkpointer=memory)
 
 
 if __name__ == '__main__':
+    graph = get_graph()
+    config = {"configurable": {"thread_id": 1}}
+
     while True:
         user_input = input("You: ")
-        user_input += ". Please use tool when user asks you about info, looks/images or videos of something."
+        user_input += USER_QUERY_SUFFIX
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
 
-        res = graph.invoke({'messages': user_input}, config)['messages'][-1]
-        print(res)
+        res = graph.stream({'messages': user_input}, config=config, stream_mode="updates")
+
+        # print(res)
+
+        for chunk in res:
+            if 'chatbot' in chunk:
+                last_message = chunk['chatbot']['messages'][-1]
+                if last_message.additional_kwargs['final']:
+                    print(last_message)
