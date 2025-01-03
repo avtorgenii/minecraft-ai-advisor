@@ -1,3 +1,5 @@
+import json
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -79,9 +81,12 @@ graph_builder.add_edge("chatbot", END)
 
 
 # Memory
+# def load_memory():
+#     conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
+#     return SqliteSaver(conn)
+
 def load_memory():
-    conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
-    return SqliteSaver(conn)
+    return MemorySaver()
 
 # Compilation
 def get_graph():
@@ -113,3 +118,8 @@ if __name__ == '__main__':
                 last_message = chunk['chatbot']['messages'][-1]
                 if last_message.additional_kwargs['final']:
                     print(last_message)
+            elif 'tools' in chunk:
+                print(chunk)
+                images = json.loads(chunk['tools']['messages'][0].content).get('images', [])
+                videos = json.loads(chunk['tools']['messages'][0].content).get('videos', [])
+                print(images)

@@ -26,11 +26,11 @@ def unified_search_tool(queries: List[str], tools_to_call: List[str]) -> Dict[st
 
     for query in queries:
         if "info" in tools_to_call:
-            results["info"].append(cp.get_context(query))
+            results["info"] = cp.get_context(query)
         if "images" in tools_to_call:
-            results["images"].append(cp.search_images(query))
+            results["images"] = cp.search_images(query)
         if "videos" in tools_to_call:
-            results["videos"].append(cp.search_videos(query))
+            results["videos"] = cp.search_videos(query)
 
     # Remove keys with no results
     results = {k: v for k, v in results.items() if v}
