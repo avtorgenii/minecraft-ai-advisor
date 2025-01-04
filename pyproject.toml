@@ -38,6 +38,7 @@ snowballstemmer = "~2.2"
 pyOpenSSL = ">=24.3.0"
 psutil = ">=6.1.1"
 nltk = ">=3.9.1"
+googlesearch-python = "^1.2.5"
 
 
 [build-system]

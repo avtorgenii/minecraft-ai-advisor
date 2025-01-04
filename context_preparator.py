@@ -2,6 +2,7 @@ import asyncio
 
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
+from googlesearch import search
 import requests
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from selenium import webdriver
@@ -38,7 +39,21 @@ class ContextPreparator:
 
     def _search_web_pages(self, query, max_results):
         """Search for web pages using DuckDuckGo."""
-        return [res['href'] for res in self.ddgs.text(query, max_results=max_results)]
+        hrefs = []
+
+        try:
+            results = self.ddgs.text(query, max_results=max_results)
+            hrefs = [res['href'] for res in results]
+        except Exception as e:
+            print(e)
+            try:
+                results = search(query, num_results=max_results)
+                hrefs = [res for res in results]
+            except Exception as e:
+                print(e)
+                hrefs = []
+
+        return hrefs
 
     def _selenium_search(self, href):
         """Use Selenium to extract page content."""
@@ -173,6 +188,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
