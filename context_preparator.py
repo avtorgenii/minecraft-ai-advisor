@@ -20,6 +20,7 @@ class ContextPreparator:
         self.options.add_argument('--disable-gpu')  # Disable GPU for headless mode
         self.options.add_argument('--no-sandbox')  # Necessary for some systems (Linux-based)
         self.options.add_argument('--mute-audio')  # Mute audio
+        self.options.add_argument("--disable-webgl")
         self.driver = webdriver.Chrome(options=self.options)
 
         # Sentence encoder for extracting context
@@ -151,11 +152,13 @@ class ContextPreparator:
 if __name__ == '__main__':
     query = "how to make nether portal"
 
-    cp = ContextPreparator()
 
-    context = cp.get_context(query)
 
-    print(context)
+    # cp = ContextPreparator()
+    #
+    # context = cp.get_context(query)
+    #
+    # print(context)
 
 
 

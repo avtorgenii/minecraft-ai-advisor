@@ -22,23 +22,26 @@ graph = get_graph()
 
 
 
+
+
+
 @cl.set_starters
 async def set_starters():
     return [
         cl.Starter(
             label="What is blood altar?",
-            message="What is blood altar?",
+            message="What is blood altar? Use tool to find text info.",
             icon="/public/write.svg",
         ),
 
         cl.Starter(
             label="How does a quarry look like in BuildCraft?",
-            message="How does a quarry look like in BuildCraft?",
+            message="How does a quarry look like in BuildCraft? Use tool to find images.",
             icon="/public/image.svg",
         ),
         cl.Starter(
             label="Find a video tutorial on how to summon Asorah the Fallen.",
-            message="Find a video tutorial on how to summon Asorah the Fallen.",
+            message="Find a video tutorial on how to summon Asorah the Fallen. Use tool to find videos.",
             icon="/public/video.svg",
         )
     ]

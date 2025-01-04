@@ -22,7 +22,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 # Should be passed to graph as a parameter and defined somewhere in main.py
 llm = ChatOllama(
     model = "llama3-groq-tool-use",
-    temperature = 0.2,
+    temperature = 0,
     num_predict = 256
 )
 

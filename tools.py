@@ -11,15 +11,40 @@ cp = ContextPreparator()
 
 @tool(parse_docstring=True)
 def unified_search_tool(queries: List[str], tools_to_call: List[str]) -> Dict[str, List[str]]:
-    """
-    A unified tool that performs web searches for multiple queries using specified functions.
+    """A unified tool that performs web searches for multiple queries using specified functions.
+
+    This tool can search for text-based info, images, and videos. Use it when you don't have enough
+    information to answer user's query.
+
+    Tool Usage:
+        - Add "info" to tools_to_call for text-based information
+        - Add "images" to tools_to_call for finding images or appearance
+        - Add "videos" to tools_to_call for finding videos, tutorials, or guides
+
+    Search Query Construction Rules:
+        1. ALWAYS include specific keywords about what you're searching for
+           (e.g., "Blood Altar tier 4", not just "altar")
+        2. ALWAYS add relevant modpack names
+           (e.g., "BuildCraft", "Blood Magic", "ThaumCraft")
+        3. ALWAYS include purpose or context
+           (e.g., "how to build", "appearance", "requirements")
+        4. ALWAYS append "in minecraft" to EVERY query
+        5. ALWAYS use multiple queries for different aspects
+
+    Example Queries:
+        - ["buildcraft quarry appearance in minecraft",
+           "buildcraft quarry setup in minecraft"]
+        - ["blood altar tier 4 requirements in minecraft",
+           "blood altar tier 4 construction steps in minecraft"]
+        - ["thaumcraft infusion altar layout in minecraft",
+           "thaumcraft infusion altar tutorial in minecraft"]
 
     Args:
-        queries (List[str]): A list of search queries. Add to the end of query "in minecraft" words.
-        tools_to_call (List[str]): A list of tool names to call. Supported tools: ["info", "images", "videos"]. Use "info" tool when user asks you about information on something.
+        queries: A list of search queries. Each query must end with "in minecraft".
+        tools_to_call: A list of tool names to call. Supported tools: ["info", "images", "videos"].
 
     Returns:
-        Dict[str, List[str]]: A dictionary where keys are tool names and values are lists of results
+        A dictionary where keys are tool names and values are lists of results
         corresponding to the queries for each tool.
     """
     results = {"info": [], "images": [], "videos": []}

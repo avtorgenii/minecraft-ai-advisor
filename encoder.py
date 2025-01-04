@@ -1,6 +1,7 @@
 from sentence_transformers import SentenceTransformer
 
 def save_st(verbose=False):
+    # model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
     model = SentenceTransformer('all-MiniLM-L6-v2')
     model.save_pretrained("./model")
 
@@ -21,4 +22,4 @@ def load_st(verbose=False):
 
 
 if __name__ == '__main__':
-    load_st(verbose=True)
+    save_st(verbose=True)
