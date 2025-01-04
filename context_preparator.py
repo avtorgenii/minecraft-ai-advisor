@@ -64,7 +64,7 @@ class ContextPreparator:
             return None
         return page_content
 
-    def _parse_web_page(self, href, for_craft=False):
+    def _parse_web_page(self, href):
         """
         Parse the web page and extract text content.
         If for_craft is True, extract items for crafting.
@@ -92,7 +92,7 @@ class ContextPreparator:
         documents = []
 
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=5000,
+            chunk_size=1000,
             chunk_overlap=200
         )
 
@@ -162,32 +162,14 @@ class ContextPreparator:
 
         return video_urls
 
+if __name__ == '__main__':
+    cp = ContextPreparator()
+
+    res = cp._parse_web_page("https://minecraft.wiki/w/Bucket_of_Cod")
+
+    print(res)
 
 
-import asyncio
-from crawl4ai import AsyncWebCrawler, CacheMode
-from crawl4ai.extraction_strategy import CosineStrategy
-
-def main():
-    strategy = CosineStrategy(
-        semantic_filter="what is blood altar",  # Content focus
-        word_count_threshold=100,  # Minimum words per cluster
-        sim_threshold=0.3,  # Similarity threshold
-        max_dist=0.2,  # Maximum cluster distance
-        top_k=1  # Number of top clusters to extract
-    )
-
-    async def extract(href):
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=href, strategy=strategy)
-            print(result.extracted_content)
-
-    query = "what is blood altar"
-    href = "https://ftb.fandom.com/wiki/Blood_Altar"
-    asyncio.run(extract(href))
-
-if __name__ == "__main__":
-    main()
 
 
 
