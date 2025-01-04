@@ -1,0 +1,1 @@
+playwright install - needed besides package installation

@@ -1,3 +1,5 @@
+import asyncio
+
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 import requests
@@ -147,18 +149,31 @@ class ContextPreparator:
 
 
 
+import asyncio
+from crawl4ai import AsyncWebCrawler, CacheMode
+from crawl4ai.extraction_strategy import CosineStrategy
 
+def main():
+    strategy = CosineStrategy(
+        semantic_filter="what is blood altar",  # Content focus
+        word_count_threshold=100,  # Minimum words per cluster
+        sim_threshold=0.3,  # Similarity threshold
+        max_dist=0.2,  # Maximum cluster distance
+        top_k=1  # Number of top clusters to extract
+    )
 
-if __name__ == '__main__':
-    query = "how to make nether portal"
+    async def extract(href):
+        async with AsyncWebCrawler() as crawler:
+            result = await crawler.arun(url=href, strategy=strategy)
+            print(result.extracted_content)
 
+    query = "what is blood altar"
+    href = "https://ftb.fandom.com/wiki/Blood_Altar"
+    asyncio.run(extract(href))
 
+if __name__ == "__main__":
+    main()
 
-    # cp = ContextPreparator()
-    #
-    # context = cp.get_context(query)
-    #
-    # print(context)
 
 
 
