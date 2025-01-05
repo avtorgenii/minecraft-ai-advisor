@@ -5,8 +5,7 @@ load_dotenv()
 
 
 from langgraph.prebuilt import ToolNode, tools_condition
-from typing import List, Annotated
-from langchain_openai import ChatOpenAI
+from typing import Annotated
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph, START, add_messages
 from typing_extensions import TypedDict
@@ -14,16 +13,15 @@ from langchain_ollama import ChatOllama
 from prompts import *
 from tools import unified_search_tool
 
-import sqlite3
-from langgraph.checkpoint.sqlite import SqliteSaver
+# import sqlite3
+# from langgraph.checkpoint.sqlite import SqliteSaver
 
 
 # Necessary definitions
-# Should be passed to graph as a parameter and defined somewhere in main.py
 llm = ChatOllama(
     model = "llama3-groq-tool-use",
     temperature = 0,
-    num_predict = 256
+    num_predict = 600
 )
 
 # llm = ChatOpenAI(
@@ -104,7 +102,6 @@ if __name__ == '__main__':
 
     while True:
         user_input = input("You: ")
-        user_input += USER_QUERY_SUFFIX
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break

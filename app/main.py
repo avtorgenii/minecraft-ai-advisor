@@ -2,7 +2,7 @@ import json
 
 # from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
-from graph import get_graph, load_memory
+from graph import get_graph
 
 import chainlit as cl
 # import chainlit.data as cl_data

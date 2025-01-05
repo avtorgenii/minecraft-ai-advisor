@@ -1,15 +1,13 @@
-import asyncio
-
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 from googlesearch import search
-import requests
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from selenium import webdriver
 from selenium.common import WebDriverException
 from selenium.webdriver.chrome.options import Options
-from encoder import load_st
 from sklearn.metrics.pairwise import cosine_similarity
+
+from encoder import load_st
 
 
 class ContextPreparator:
@@ -76,7 +74,7 @@ class ContextPreparator:
 
         soup = BeautifulSoup(html, 'html.parser')
 
-        return soup.get_text(separator=' ', strip=True)
+        return soup.get_text(separator=' ', strip=False)
 
     def _split_htmls_into_documents(self, htmls):
         """
