@@ -53,4 +53,4 @@ chainlit run app/main.py
 ## Funny moment
 During development, when I tried to make model show me video tutorial on how to build Buildcraft quarry, model literally rickrolled me, sending me a link to Never Gonna Give You Up, without performing web search(!!!) :dizzy_face:.
 
-Shoutout to Meta or groq team for feeding llama a bit too much Reddit threads to make this possible :triumph:
+Shoutout to Meta or groq team for feeding llama a bit too much Reddit threads to make this possible :triumph:.
