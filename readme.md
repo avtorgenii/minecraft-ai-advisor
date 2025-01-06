@@ -38,7 +38,7 @@ To run **Mark** you need to:
 1. Install [Ollama](https://ollama.com/download)
 2. Pull [llama3-groq-tool-use](https://ollama.com/library/llama3-groq-tool-use) model
 ```bash
-ollama pull ollama run llama3-groq-tool-use:8b
+ollama run llama3-groq-tool-use:8b
 ```
 3. Make Ollama serve, so model would be accessible from python app
 ```bash
